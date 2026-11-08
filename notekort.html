@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notekort</title>
+<style>
+:root{
+  --ink:#15181D; --ink-2:#1D2229; --ink-3:#272D36; --line:#39424E;
+  --paper:#F6F2E9; --notation:#14171B;
+  --rose:#B5652E; --rose-lit:#D08447; --brass:#D9A441;
+  --text:#E7E3DA; --muted:#8E97A4; --ok:#4E9A6B; --no:#C0483F;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--ink);color:var(--text);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding-bottom:env(safe-area-inset-bottom)}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px 40px}
+
+header{display:flex;align-items:baseline;gap:10px;padding:18px 0 10px}
+h1{font:600 20px/1 "Iowan Old Style",Georgia,serif;letter-spacing:.02em;margin:0}
+h1 em{font-style:normal;color:var(--rose-lit)}
+.sub{color:var(--muted);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+
+nav{display:flex;gap:6px;margin-bottom:16px}
+nav button{flex:1;padding:9px 0;border:1px solid var(--line);background:transparent;
+  color:var(--muted);border-radius:8px;font:inherit;font-size:14px;cursor:pointer}
+nav button[aria-current="true"]{background:var(--ink-3);color:var(--text);border-color:var(--rose)}
+
+.panel{display:none}
+.panel.on{display:block}
+
+.status{display:flex;justify-content:space-between;align-items:center;
+  font-size:13px;color:var(--muted);margin-bottom:10px}
+.status b{color:var(--text);font-weight:600}
+.card{background:var(--paper);border-radius:12px;padding:6px 4px;box-shadow:0 8px 26px rgba(0,0,0,.4)}
+.card svg{display:block;width:100%;height:auto}
+.clefname{text-align:center;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin:10px 0 0;min-height:16px}
+.feedback{text-align:center;min-height:30px;margin:8px 0 2px;font-size:17px;font-weight:600}
+.feedback.ok{color:var(--ok)}
+.feedback.no{color:var(--no)}
+
+.bars{display:flex;gap:5px;align-items:flex-start;margin-top:6px}
+.bar{flex:1;border:0;cursor:pointer;position:relative;
+  background:linear-gradient(180deg,var(--rose-lit),var(--rose));
+  border-radius:5px;color:#2A1206;
+  font:700 19px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  box-shadow:0 3px 0 #7C4220;display:flex;align-items:center;justify-content:center;
+  transition:transform .06s ease, box-shadow .06s ease}
+.bar:active{transform:translateY(3px);box-shadow:0 0 0 #7C4220}
+.bar::after{content:"";position:absolute;bottom:7px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:rgba(0,0,0,.32)}
+.bar:disabled{opacity:.45;cursor:default}
+.bar:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+.empty{border:1px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--text);margin-bottom:6px;font-weight:600}
+
+h2{font:600 15px/1.2 inherit;margin:22px 0 8px}
+h2:first-child{margin-top:4px}
+.hint{color:var(--muted);font-size:13px;margin:0 0 10px}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;padding:9px 0;border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:8px;font:inherit;font-size:14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--rose);border-color:var(--rose);color:#231004;font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.presets button{padding:6px 11px;border:1px solid var(--line);background:transparent;color:var(--text);
+  border-radius:999px;font:inherit;font-size:13px;cursor:pointer}
+.presets button:active{background:var(--ink-3)}
+.octave{margin-bottom:12px}
+.octave .lbl{font-size:12px;color:var(--muted);letter-spacing:.06em;margin-bottom:5px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{min-width:44px;padding:8px 6px;border:1px solid var(--line);background:transparent;
+  color:var(--muted);border-radius:7px;font:inherit;font-size:14px;cursor:pointer;text-align:center}
+.chip[aria-pressed="true"]{background:var(--ink-3);border-color:var(--rose-lit);color:var(--text);font-weight:600}
+.chip small{display:block;font-size:10px;opacity:.6;font-weight:400}
+
+.primary{width:100%;padding:13px;border:0;border-radius:9px;background:var(--rose);color:#231004;
+  font:600 16px inherit;cursor:pointer;margin-top:6px}
+.ghost{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:transparent;
+  color:var(--muted);font:inherit;font-size:14px;cursor:pointer;margin-top:8px}
+.toast{text-align:center;font-size:13px;color:var(--ok);min-height:18px;margin-top:8px}
+
+.rows{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.row{display:flex;justify-content:space-between;padding:9px 12px;font-size:14px;border-bottom:1px solid var(--ink-3)}
+.row:last-child{border-bottom:0}
+.row span{color:var(--muted)}
+.miss{display:flex;align-items:center;gap:10px;padding:7px 12px;font-size:14px;border-bottom:1px solid var(--ink-3)}
+.miss:last-child{border-bottom:0}
+.miss .n{width:52px;font-weight:600}
+.miss .track{flex:1;height:7px;background:var(--ink-3);border-radius:4px;overflow:hidden}
+.miss .fill{height:100%;background:var(--rose)}
+.miss .pct{width:74px;text-align:right;color:var(--muted);font-size:12.5px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Note<em>kort</em></h1>
+  <div class="sub" id="poolSize"></div>
+</header>
+
+<nav>
+  <button id="tabDrill" aria-current="true">Øv</button>
+  <button id="tabDeck">Noter</button>
+</nav>
+
+<section class="panel on" id="pDrill"><div id="drillBody"></div></section>
+
+<section class="panel" id="pDeck">
+  <h2>Instrument</h2>
+  <p class="hint">Setter utvalget til instrumentets noterte register. Noter under G-nøkkelens område legges i F-nøkkel.</p>
+  <div class="presets" id="instruments"></div>
+
+  <h2>Nøkkel</h2>
+  <div class="seg" id="clefSeg">
+    <button data-clef="treble" aria-pressed="true">G-nøkkel</button>
+    <button data-clef="bass" aria-pressed="false">F-nøkkel</button>
+  </div>
+
+  <h2>Noter i utvalget</h2>
+  <p class="hint" id="clefHint"></p>
+  <div class="presets" id="presets"></div>
+  <div id="picker"></div>
+
+  <button class="primary" id="saveDeck">Lagre utvalget</button>
+  <div class="toast" id="toast"></div>
+
+  <h2>Treff per note</h2>
+  <div class="rows" id="missList"></div>
+
+  <h2>Notenavn</h2>
+  <div class="seg" id="langSeg">
+    <button data-lang="no" aria-pressed="true">Norsk (H)</button>
+    <button data-lang="en" aria-pressed="false">Engelsk (B)</button>
+  </div>
+
+  <button class="ghost" id="wipeStats">Nullstill statistikk</button>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+const LETTERS = ["C","D","E","F","G","A","B"];
+const CLEFS = {
+  treble:{ label:"G-nøkkel", bottom:30, min:24, max:56,
+           presets:[["I systemet",30,38],["Under systemet",24,29],["Over systemet",39,45]] },
+  bass:  { label:"F-nøkkel", bottom:18, min:14, max:35,
+           presets:[["I systemet",18,26],["Under systemet",14,17],["Over systemet",27,35]] }
+};
+const INSTRUMENTS = [
+  ["Klokkespill",        39, 56],   // G5–C8, 2,5 okt
+  ["Xylofon 3,5",        31, 56],   // F4–C8
+  ["Xylofon 4",          28, 56],   // C4–C8
+  ["Vibrafon 3",         24, 45],   // F3–F6
+  ["Marimba 4,3",        19, 49],   // A2–C7
+  ["Marimba 4,5",        17, 49],   // F2–C7
+  ["Marimba 5",          14, 49]    // C2–C7
+];
+const KEY = "notekort.v2";
+
+let state = { sel:{treble:[],bass:[]}, lang:"no", stats:{} };
+let ui = { clef:"treble", sel:{treble:new Set(), bass:new Set()} };
+let session = { card:null, prev:null, right:0, wrong:0, streak:0, best:0, locked:false };
+
+function letterName(idx){
+  const l = LETTERS[idx%7];
+  return (l==="B" && state.lang==="no") ? "H" : l;
+}
+const fullName = idx => letterName(idx) + Math.floor(idx/7);
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw) state = Object.assign(state, JSON.parse(raw));
+  }catch(e){}
+  ui.sel = { treble:new Set(state.sel.treble||[]), bass:new Set(state.sel.bass||[]) };
+}
+function save(){
+  state.sel = { treble:[...ui.sel.treble], bass:[...ui.sel.bass] };
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ toast("Fikk ikke lagret. Er lagring blokkert i nettleseren?", true); }
+}
+
+/* ---------- notasjon ---------- */
+const GAP = 14, BOTTOM = 155, NOTE_X = 152;
+const yFor = (clef,idx) => BOTTOM - (idx - CLEFS[clef].bottom) * (GAP/2);
+const TREBLE_PATH = `
+ <path d="M 36 82 C 41 102 43 122 40 141 C 37 160 33 173 23 175 C 15 176 11 169 16 163"/>
+ <path d="M 36 82 C 24 90 19 104 22 118 C 30 128 42 130 44 142 C 46 156 34 164 24 158 C 15 153 15 138 30 140"/>`;
+const BASS_PATH = `<path d="M 22 113 C 22 103 34 100 40 106 C 48 114 42 132 28 144 C 22 149 16 152 12 154"/>`;
+const BASS_DOTS = `<circle cx="22" cy="113" r="3.4"/><circle cx="48" cy="106" r="2.8"/><circle cx="48" cy="120" r="2.8"/>`;
+
+function viewBounds(){
+  let yMin = 99, yMax = 155;
+  for(const k of pool()){
+    const [cl,i] = k.split(":");
+    const y = yFor(cl, +i);
+    if(y < yMin) yMin = y;
+    if(y > yMax) yMax = y;
+  }
+  const top = Math.min(yMin - 20, 74);
+  const bot = Math.max(yMax + 20, 188);
+  return `0 ${top} 220 ${bot-top}`;
+}
+
+function staffSVG(clef, idx){
+  const c = CLEFS[clef];
+  const lines = [0,1,2,3,4].map(i=>`<line x1="10" y1="${BOTTOM-i*GAP}" x2="210" y2="${BOTTOM-i*GAP}"/>`).join("");
+  const step = idx - c.bottom;
+  let ledger = "";
+  for(let s=10; s<=step; s+=2) ledger += `<line x1="${NOTE_X-15}" y1="${BOTTOM-s*GAP/2}" x2="${NOTE_X+15}" y2="${BOTTOM-s*GAP/2}"/>`;
+  for(let s=-2; s>=step; s-=2) ledger += `<line x1="${NOTE_X-15}" y1="${BOTTOM-s*GAP/2}" x2="${NOTE_X+15}" y2="${BOTTOM-s*GAP/2}"/>`;
+  const y = yFor(clef, idx);
+  const clefArt = clef==="treble"
+    ? `<g fill="none" stroke="var(--notation)" stroke-width="3.4" stroke-linecap="round">${TREBLE_PATH}</g>`
+    : `<g><g fill="none" stroke="var(--notation)" stroke-width="3.4" stroke-linecap="round">${BASS_PATH}</g><g fill="var(--notation)">${BASS_DOTS}</g></g>`;
+  return `<svg viewBox="${viewBounds()}" role="img" aria-label="Note i ${c.label}">
+    <g stroke="var(--notation)" stroke-width="1.6" stroke-linecap="square">${lines}${ledger}</g>
+    ${clefArt}
+    <ellipse cx="${NOTE_X}" cy="${y}" rx="9" ry="6.6" fill="var(--notation)" transform="rotate(-18 ${NOTE_X} ${y})"/>
+  </svg>`;
+}
+
+/* ---------- trekking ---------- */
+function pool(){
+  const p = [];
+  for(const clef of ["treble","bass"]) for(const i of (state.sel[clef]||[])) p.push(clef+":"+i);
+  return p;
+}
+function draw(){
+  const p = pool();
+  if(!p.length) return null;
+  if(p.length===1) return p[0];
+  let pick;
+  do { pick = p[Math.floor(Math.random()*p.length)]; } while(pick === session.prev);
+  return pick;
+}
+
+/* ---------- ØV ---------- */
+function renderDrill(){
+  const body = document.getElementById("drillBody");
+  const p = pool();
+  if(!p.length){
+    body.innerHTML = `<div class="empty"><b>Ingen noter valgt</b>Velg noter under Noter-fanen.</div>`;
+    return;
+  }
+  if(!session.card) session.card = draw();
+
+  const [clef, idxStr] = session.card.split(":");
+  const idx = +idxStr;
+  const tot = session.right + session.wrong;
+  body.innerHTML = `
+    <div class="status">
+      <div><b>${session.right}</b> riktig · ${session.wrong} feil${tot?` · ${Math.round(session.right/tot*100)}%`:""}</div>
+      <div>På rad: <b>${session.streak}</b>${session.best>2?` (beste ${session.best})`:""}</div>
+    </div>
+    <div class="card">${staffSVG(clef, idx)}</div>
+    <p class="clefname">${CLEFS[clef].label}</p>
+    <p class="feedback" id="fb">&nbsp;</p>
+    <div class="bars" id="bars"></div>`;
+
+  const bars = document.getElementById("bars");
+  LETTERS.forEach((L,i)=>{
+    const b = document.createElement("button");
+    b.className = "bar";
+    b.style.height = (70 - i*3) + "px";
+    b.textContent = (L==="B" && state.lang==="no") ? "H" : L;
+    b.onclick = ()=>answer(i);
+    bars.appendChild(b);
+  });
+}
+
+function nextCard(){
+  session.prev = session.card;
+  session.card = draw();
+  session.locked = false;
+  renderDrill();
+}
+
+function answer(letterIdx){
+  if(session.locked || !session.card) return;
+  session.locked = true;
+  const idx = +session.card.split(":")[1];
+  const correct = (idx % 7) === letterIdx;
+  const fb = document.getElementById("fb");
+  document.querySelectorAll(".bar").forEach(b=>b.disabled = true);
+
+  const s = state.stats[session.card] || (state.stats[session.card] = {r:0,w:0});
+  if(correct){
+    s.r++; session.right++; session.streak++;
+    session.best = Math.max(session.best, session.streak);
+    fb.textContent = letterName(idx) + " — riktig";
+    fb.className = "feedback ok";
+    save();
+    setTimeout(nextCard, 420);
+  }else{
+    s.w++; session.wrong++; session.streak = 0;
+    fb.textContent = "Det var " + fullName(idx);
+    fb.className = "feedback no";
+    save();
+    setTimeout(()=>document.addEventListener("click", nextCard, {once:true}), 120);
+  }
+}
+
+document.addEventListener("keydown", e=>{
+  if(document.getElementById("pDrill").classList.contains("on") && session.card && !session.locked){
+    const k = e.key.toUpperCase();
+    const i = (k==="H") ? 6 : LETTERS.indexOf(k);
+    if(i>=0) answer(i);
+  }
+});
+
+/* ---------- noter ---------- */
+function applyInstrument(lo, hi){
+  ui.sel.treble.clear(); ui.sel.bass.clear();
+  const t = CLEFS.treble, b = CLEFS.bass;
+  for(let i=lo; i<=hi; i++){
+    if(i >= t.min && i <= t.max) ui.sel.treble.add(i);
+    else if(i >= b.min && i <= b.max) ui.sel.bass.add(i);
+  }
+  renderPicker();
+}
+
+function renderInstruments(){
+  const el = document.getElementById("instruments");
+  el.innerHTML = "";
+  INSTRUMENTS.forEach(([label,lo,hi])=>{
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.onclick = ()=>applyInstrument(lo,hi);
+    el.appendChild(b);
+  });
+}
+
+function renderPicker(){
+  const clef = ui.clef, c = CLEFS[clef];
+  document.getElementById("clefHint").textContent =
+    `${c.label}: notene du huker av trekkes tilfeldig. Tallet er oktaven — C4 er enstrøken C.`;
+
+  const pres = document.getElementById("presets");
+  pres.innerHTML = "";
+  const mk = (label, fn)=>{ const b=document.createElement("button"); b.textContent=label; b.onclick=fn; pres.appendChild(b); };
+  c.presets.forEach(([label,lo,hi])=> mk(label, ()=>{ for(let i=lo;i<=hi;i++) ui.sel[clef].add(i); renderPicker(); }));
+  mk("Alle", ()=>{ for(let i=c.min;i<=c.max;i++) ui.sel[clef].add(i); renderPicker(); });
+  mk("Tøm", ()=>{ ui.sel[clef].clear(); renderPicker(); });
+
+  const picker = document.getElementById("picker");
+  picker.innerHTML = "";
+  let oct = null, group = null;
+  for(let i=c.min;i<=c.max;i++){
+    const o = Math.floor(i/7);
+    if(o!==oct){
+      oct = o;
+      group = document.createElement("div"); group.className = "octave";
+      const lbl = document.createElement("div"); lbl.className="lbl"; lbl.textContent = "Oktav " + o;
+      const chips = document.createElement("div"); chips.className="chips";
+      group.appendChild(lbl); group.appendChild(chips); picker.appendChild(group);
+    }
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.setAttribute("aria-pressed", ui.sel[clef].has(i));
+    b.innerHTML = letterName(i) + "<small>" + o + "</small>";
+    b.onclick = ()=>{ ui.sel[clef].has(i) ? ui.sel[clef].delete(i) : ui.sel[clef].add(i); renderPicker(); };
+    group.querySelector(".chips").appendChild(b);
+  }
+  renderInstruments();
+  renderMissList();
+}
+
+function renderMissList(){
+  const el = document.getElementById("missList");
+  const rows = Object.keys(state.stats)
+    .map(k=>{ const s=state.stats[k], n=s.r+s.w; return {k,n,pct:n?s.r/n:0}; })
+    .filter(x=>x.n>0)
+    .sort((a,b)=> a.pct-b.pct || b.n-a.n)
+    .slice(0,14);
+  if(!rows.length){
+    el.innerHTML = `<div class="row"><span>Ingen svar registrert ennå</span></div>`;
+  }else{
+    el.innerHTML = rows.map(x=>{
+      const [clef,i] = x.k.split(":");
+      const tag = (clef==="treble"?"G ":"F ") + fullName(+i);
+      return `<div class="miss"><div class="n">${tag}</div>
+        <div class="track"><div class="fill" style="width:${Math.round(x.pct*100)}%"></div></div>
+        <div class="pct">${Math.round(x.pct*100)}% · ${x.n}</div></div>`;
+    }).join("");
+  }
+  const n = pool().length;
+  document.getElementById("poolSize").textContent = n ? n + " noter" : "";
+}
+
+function toast(msg, bad){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.color = bad ? "var(--no)" : "var(--ok)";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>{ t.textContent=""; }, 2600);
+}
+
+function showTab(which){
+  const drill = which==="drill";
+  document.getElementById("pDrill").classList.toggle("on", drill);
+  document.getElementById("pDeck").classList.toggle("on", !drill);
+  document.getElementById("tabDrill").setAttribute("aria-current", drill);
+  document.getElementById("tabDeck").setAttribute("aria-current", !drill);
+  drill ? renderDrill() : renderPicker();
+}
+document.getElementById("tabDrill").onclick = ()=>showTab("drill");
+document.getElementById("tabDeck").onclick  = ()=>showTab("deck");
+
+document.getElementById("clefSeg").onclick = e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  ui.clef = b.dataset.clef;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  renderPicker();
+};
+document.getElementById("langSeg").onclick = e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  state.lang = b.dataset.lang; save();
+  [...e.currentTarget.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  renderPicker();
+};
+document.getElementById("saveDeck").onclick = ()=>{
+  save();
+  session = { card:null, prev:null, right:0, wrong:0, streak:0, best:0, locked:false };
+  renderMissList();
+  toast(pool().length ? "Utvalget er lagret." : "Ingen noter valgt.");
+};
+document.getElementById("wipeStats").onclick = ()=>{
+  if(!confirm("Nullstiller treffstatistikken. Utvalget beholdes. Fortsette?")) return;
+  state.stats = {}; save(); renderMissList(); toast("Statistikken er nullstilt.");
+};
+
+load();
+[...document.getElementById("langSeg").children].forEach(x=>
+  x.setAttribute("aria-pressed", x.dataset.lang===state.lang));
+showTab(pool().length ? "drill" : "deck");
+</script>
+</body>
+</html>
